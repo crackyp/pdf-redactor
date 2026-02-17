@@ -1,48 +1,47 @@
 # PDF Redactor
 
-A user-friendly tool for automatically detecting and redacting sensitive information from PDFs.
+A simple web app for automatically detecting and redacting sensitive information from PDF documents.
 
 ## Features
 
 - **Drag & drop** PDF upload
-- **Auto-detect** common PII:
+- **Auto-detect** common PII patterns:
   - Social Security Numbers (full, partial, last 4)
   - Dates of Birth
-  - Driver's License Numbers
   - Phone Numbers
   - Email Addresses
+  - Driver's License Numbers
   - Account Numbers
 - **Visual preview** with highlighted matches
-- **Select/deselect** individual items
+- **Select/deselect** individual items to redact
 - **Manual redaction** for custom text
-- **Download** redacted PDF
+- **Download** redacted PDF with one click
 
-## Quick Start
+## Live Demo
+
+Try it at: [pdf-redactor.streamlit.app](https://pdf-redactor.streamlit.app)
+
+## Run Locally
 
 ```bash
-cd /home/crackypp/projects/pdf-redactor
+pip install streamlit pymupdf
 streamlit run app.py
 ```
 
-Then open http://localhost:8501 in your browser.
+## How It Works
 
-## Running on LAN
+1. Upload a PDF
+2. The app scans for text matching common PII patterns
+3. Matches are highlighted in the preview and listed with checkboxes
+4. Select which items to redact
+5. Click "Redact" and download your clean PDF
 
-To access from other devices on your network:
+Redactions are permanent — the text is removed from the PDF, not just covered up.
 
-```bash
-streamlit run app.py --server.address 0.0.0.0 --server.port 8501
-```
+## Privacy
 
-Then access via http://YOUR_PI_IP:8501
+All processing happens locally in your browser session. No files are stored or transmitted to external servers.
 
-## Requirements
+## License
 
-- Python 3.8+
-- streamlit
-- pymupdf (fitz)
-
-Install with:
-```bash
-pip3 install streamlit pymupdf
-```
+MIT
