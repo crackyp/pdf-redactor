@@ -19,7 +19,7 @@ A simple web app for automatically detecting and redacting sensitive information
 
 ## Live Demo
 
-Try it at: [pdf-redactor.streamlit.app](https://pdf-redactor.streamlit.app)
+Try it at: [pdf-redactor.streamlit.app]([https://pdf-redactor.streamlit.app](https://pdf-redactor-awesome.streamlit.app))
 
 ## Run Locally
 
