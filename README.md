@@ -37,11 +37,3 @@ streamlit run app.py
 5. Click "Redact" and download your clean PDF
 
 Redactions are permanent — the text is removed from the PDF, not just covered up.
-
-## Privacy
-
-All processing happens locally in your browser session. No files are stored or transmitted to external servers.
-
-## License
-
-MIT
