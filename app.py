@@ -88,16 +88,22 @@ PREMIUM_PATTERNS = {
 
 # ============ AUTH FUNCTIONS ============
 
-def get_user_tier(user_id):
+def get_user_tier(user_id, debug=False):
     """Fetch user's subscription tier from database"""
     if not supabase:
+        if debug:
+            st.write("DEBUG: Supabase not initialized")
         return "free"
     try:
-        result = supabase.table("users").select("tier").eq("id", user_id).single().execute()
+        result = supabase.table("users").select("tier").eq("id", str(user_id)).single().execute()
+        if debug:
+            st.write(f"DEBUG: user_id = {user_id}")
+            st.write(f"DEBUG: query result = {result.data}")
         if result.data:
             return result.data.get("tier", "free")
-    except:
-        pass
+    except Exception as e:
+        if debug:
+            st.write(f"DEBUG: Error = {e}")
     return "free"
 
 def create_user_record(user_id, email):
@@ -483,7 +489,7 @@ def main():
     user = None
     if "user" in st.session_state and st.session_state.user:
         user = st.session_state.user
-        tier = get_user_tier(user.id)
+        tier = get_user_tier(user.id, debug=True)
         is_premium = tier == "premium"
     
     # Tabs: Redactor and Account
