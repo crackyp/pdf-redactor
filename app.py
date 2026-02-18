@@ -41,12 +41,14 @@ st.markdown("""
         text-shadow: 0 0 30px rgba(96, 165, 250, 0.5), 0 0 60px rgba(96, 165, 250, 0.3);
         margin-bottom: 0.5rem;
         letter-spacing: -0.02em;
+        text-align: center;
     }
     .sub-header {
         font-size: 1.2rem;
         color: #94a3b8;
         margin-bottom: 2rem;
         font-weight: 400;
+        text-align: center;
     }
     .premium-badge {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
