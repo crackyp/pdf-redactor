@@ -99,11 +99,20 @@ def get_user_tier(user_id, debug=False):
         st.write(f"DEBUG: user_id = {user_id}")
     
     try:
-        result = supabase.table("users").select("tier").eq("id", str(user_id)).single().execute()
+        # Try without .single() to see all results
+        result = supabase.table("users").select("*").execute()
         if debug:
-            st.write(f"DEBUG: query result = {result.data}")
-        if result.data:
-            return result.data.get("tier", "free")
+            st.write(f"DEBUG: all users in table = {result.data}")
+        
+        # Find matching user
+        for row in result.data or []:
+            if str(row.get("id")) == str(user_id):
+                if debug:
+                    st.write(f"DEBUG: found matching row = {row}")
+                return row.get("tier", "free")
+        
+        if debug:
+            st.write("DEBUG: no matching user found")
     except Exception as e:
         if debug:
             st.write(f"DEBUG: Error = {e}")
