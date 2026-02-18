@@ -35,15 +35,18 @@ except:
 st.markdown("""
 <style>
     .main-header {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #1E3A5F;
+        font-size: 3.5rem !important;
+        font-weight: 800 !important;
+        color: #60a5fa !important;
+        text-shadow: 0 0 30px rgba(96, 165, 250, 0.5), 0 0 60px rgba(96, 165, 250, 0.3);
         margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
     }
     .sub-header {
-        font-size: 1.1rem;
-        color: #666;
+        font-size: 1.2rem;
+        color: #94a3b8;
         margin-bottom: 2rem;
+        font-weight: 400;
     }
     .premium-badge {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
