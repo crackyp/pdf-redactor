@@ -94,10 +94,13 @@ def get_user_tier(user_id, debug=False):
         if debug:
             st.write("DEBUG: Supabase not initialized")
         return "free"
+    
+    if debug:
+        st.write(f"DEBUG: user_id = {user_id}")
+    
     try:
         result = supabase.table("users").select("tier").eq("id", str(user_id)).single().execute()
         if debug:
-            st.write(f"DEBUG: user_id = {user_id}")
             st.write(f"DEBUG: query result = {result.data}")
         if result.data:
             return result.data.get("tier", "free")
