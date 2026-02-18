@@ -68,13 +68,25 @@ st.markdown("""
     }
     /* Tighten file uploader spacing */
     [data-testid="stFileUploader"] section {
-        padding: 1rem !important;
+        padding: 0.75rem !important;
     }
-    [data-testid="stFileUploader"] section > div {
-        gap: 0.5rem !important;
+    [data-testid="stFileUploader"] section > div,
+    [data-testid="stFileUploaderDropzone"] > div,
+    [data-testid="stFileDropzoneInstructions"] > div {
+        gap: 0.25rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
     [data-testid="stFileUploaderDropzone"] {
-        padding: 1.5rem 1rem !important;
+        padding: 1rem !important;
+        min-height: auto !important;
+    }
+    /* Target the small text and button wrapper */
+    [data-testid="stFileUploaderDropzone"] small {
+        margin: 0 !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button {
+        margin-top: 0.25rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
