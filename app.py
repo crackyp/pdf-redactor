@@ -66,6 +66,16 @@ st.markdown("""
     .stButton > button {
         width: 100%;
     }
+    /* Tighten file uploader spacing */
+    [data-testid="stFileUploader"] section {
+        padding: 1rem !important;
+    }
+    [data-testid="stFileUploader"] section > div {
+        gap: 0.5rem !important;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        padding: 1.5rem 1rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
