@@ -88,34 +88,16 @@ PREMIUM_PATTERNS = {
 
 # ============ AUTH FUNCTIONS ============
 
-def get_user_tier(user_id, debug=False):
+def get_user_tier(user_id):
     """Fetch user's subscription tier from database"""
     if not supabase:
-        if debug:
-            st.write("DEBUG: Supabase not initialized")
         return "free"
-    
-    if debug:
-        st.write(f"DEBUG: user_id = {user_id}")
-    
     try:
-        # Try without .single() to see all results
-        result = supabase.table("users").select("*").execute()
-        if debug:
-            st.write(f"DEBUG: all users in table = {result.data}")
-        
-        # Find matching user
-        for row in result.data or []:
-            if str(row.get("id")) == str(user_id):
-                if debug:
-                    st.write(f"DEBUG: found matching row = {row}")
-                return row.get("tier", "free")
-        
-        if debug:
-            st.write("DEBUG: no matching user found")
-    except Exception as e:
-        if debug:
-            st.write(f"DEBUG: Error = {e}")
+        result = supabase.table("users").select("tier").eq("id", str(user_id)).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0].get("tier", "free")
+    except:
+        pass
     return "free"
 
 def create_user_record(user_id, email):
@@ -501,7 +483,7 @@ def main():
     user = None
     if "user" in st.session_state and st.session_state.user:
         user = st.session_state.user
-        tier = get_user_tier(user.id, debug=True)
+        tier = get_user_tier(user.id)
         is_premium = tier == "premium"
     
     # Tabs: Redactor and Account
