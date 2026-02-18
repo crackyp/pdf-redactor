@@ -1,13 +1,11 @@
 """
 PDF Redactor - User-friendly PII redaction tool
-With authentication and premium features
+Free to use, premium features for subscribers
 """
 import streamlit as st
 import fitz  # PyMuPDF
 import re
 import io
-from supabase import create_client
-import stripe
 
 # Page config
 st.set_page_config(
@@ -16,19 +14,22 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize Supabase and Stripe from secrets
-@st.cache_resource
-def init_supabase():
-    return create_client(
-        st.secrets["SUPABASE_URL"],
-        st.secrets["SUPABASE_KEY"]
-    )
+# Try to load Supabase/Stripe (optional - app works without them)
+PREMIUM_ENABLED = False
+supabase = None
+stripe = None
 
-def init_stripe():
-    stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
-
-supabase = init_supabase()
-init_stripe()
+try:
+    from supabase import create_client
+    import stripe as stripe_module
+    
+    if "SUPABASE_URL" in st.secrets and "STRIPE_SECRET_KEY" in st.secrets:
+        supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+        stripe_module.api_key = st.secrets["STRIPE_SECRET_KEY"]
+        stripe = stripe_module
+        PREMIUM_ENABLED = True
+except:
+    pass
 
 # Custom CSS
 st.markdown("""
@@ -59,13 +60,6 @@ st.markdown("""
         border-radius: 12px;
         font-size: 0.8rem;
     }
-    .upgrade-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        border-radius: 10px;
-        color: white;
-        margin: 10px 0;
-    }
     .stButton > button {
         width: 100%;
     }
@@ -85,7 +79,7 @@ PII_PATTERNS = {
     "Account Number": r"\b(?:Account|Acct)[\s#:]*[X*]*\d{4,}\b|\b[X*]{4,}\d{4}\b",
 }
 
-# Premium-only patterns (AI-enhanced in future)
+# Premium-only patterns
 PREMIUM_PATTERNS = {
     "Street Address": r"\b\d{1,5}\s+\w+\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way|Circle|Cir)\b",
     "Zip Code": r"\b\d{5}(?:-\d{4})?\b",
@@ -96,6 +90,8 @@ PREMIUM_PATTERNS = {
 
 def get_user_tier(user_id):
     """Fetch user's subscription tier from database"""
+    if not supabase:
+        return "free"
     try:
         result = supabase.table("users").select("tier").eq("id", user_id).single().execute()
         if result.data:
@@ -106,6 +102,8 @@ def get_user_tier(user_id):
 
 def create_user_record(user_id, email):
     """Create user record in database if it doesn't exist"""
+    if not supabase:
+        return
     try:
         supabase.table("users").upsert({
             "id": user_id,
@@ -117,6 +115,8 @@ def create_user_record(user_id, email):
 
 def create_checkout_session(email, user_id):
     """Create Stripe checkout session for premium upgrade"""
+    if not stripe:
+        return None
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
@@ -134,58 +134,6 @@ def create_checkout_session(email, user_id):
     except Exception as e:
         st.error(f"Error creating checkout: {e}")
         return None
-
-def show_auth_page():
-    """Display login/signup page"""
-    st.markdown('<p class="main-header">🔒 PDF Redactor</p>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Sign in to redact sensitive information from PDFs</p>', unsafe_allow_html=True)
-    
-    tab1, tab2 = st.tabs(["Login", "Sign Up"])
-    
-    with tab1:
-        with st.form("login_form"):
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            submitted = st.form_submit_button("Login", use_container_width=True)
-            
-            if submitted and email and password:
-                try:
-                    res = supabase.auth.sign_in_with_password({
-                        "email": email,
-                        "password": password
-                    })
-                    if res.user:
-                        st.session_state.user = res.user
-                        st.session_state.session = res.session
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Login failed: {str(e)}")
-    
-    with tab2:
-        with st.form("signup_form"):
-            new_email = st.text_input("Email", key="signup_email")
-            new_password = st.text_input("Password", type="password", key="signup_pw")
-            confirm_password = st.text_input("Confirm Password", type="password")
-            submitted = st.form_submit_button("Sign Up", use_container_width=True)
-            
-            if submitted:
-                if not new_email or not new_password:
-                    st.error("Please fill in all fields")
-                elif new_password != confirm_password:
-                    st.error("Passwords don't match")
-                elif len(new_password) < 6:
-                    st.error("Password must be at least 6 characters")
-                else:
-                    try:
-                        res = supabase.auth.sign_up({
-                            "email": new_email,
-                            "password": new_password
-                        })
-                        if res.user:
-                            create_user_record(res.user.id, new_email)
-                            st.success("Account created! Please check your email to confirm, then login.")
-                    except Exception as e:
-                        st.error(f"Signup failed: {str(e)}")
 
 # ============ PDF FUNCTIONS ============
 
@@ -259,49 +207,8 @@ def render_pdf_preview(pdf_bytes, page_num=0, highlights=None):
 
 # ============ MAIN APP ============
 
-def show_main_app(user, is_premium):
+def show_redactor_app(is_premium=False, user=None):
     """Display the main PDF redactor app"""
-    
-    # Header with user info
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        st.markdown('<p class="main-header">🔒 PDF Redactor</p>', unsafe_allow_html=True)
-    with col2:
-        if is_premium:
-            st.markdown('<span class="premium-badge">⭐ Premium</span>', unsafe_allow_html=True)
-        else:
-            st.markdown('<span class="free-badge">Free Plan</span>', unsafe_allow_html=True)
-    with col3:
-        if st.button("Logout"):
-            supabase.auth.sign_out()
-            st.session_state.clear()
-            st.rerun()
-    
-    # Upgrade prompt for free users
-    if not is_premium:
-        with st.expander("⭐ Upgrade to Premium", expanded=False):
-            st.markdown("""
-            **Premium features:**
-            - 🏠 Address detection
-            - 💳 Credit card detection  
-            - 📮 Zip code detection
-            - 📄 Batch processing (coming soon)
-            - 🤖 AI-powered detection (coming soon)
-            
-            **$9/month** — Cancel anytime
-            """)
-            if st.button("Upgrade Now", type="primary"):
-                checkout_url = create_checkout_session(user.email, user.id)
-                if checkout_url:
-                    st.markdown(f'<a href="{checkout_url}" target="_blank">Click here to complete payment</a>', unsafe_allow_html=True)
-    
-    # Check for payment success
-    query_params = st.query_params
-    if query_params.get("payment") == "success":
-        st.success("🎉 Payment successful! Your premium features are now active.")
-        st.query_params.clear()
-    
-    st.divider()
     
     # File upload
     uploaded_file = st.file_uploader(
@@ -369,7 +276,6 @@ def show_main_app(user, is_premium):
                 st.divider()
                 
                 for pii_type, items in by_type.items():
-                    # Mark premium patterns
                     is_premium_pattern = pii_type in PREMIUM_PATTERNS
                     label = f"**{pii_type}** ({len(items)} found)"
                     if is_premium_pattern:
@@ -454,7 +360,7 @@ def show_main_app(user, is_premium):
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("""
-            **Free Plan:**
+            **Free:**
             - 🔢 Social Security Numbers
             - 📅 Dates of Birth
             - 📞 Phone Numbers
@@ -464,7 +370,7 @@ def show_main_app(user, is_premium):
             """)
         with col2:
             st.markdown("""
-            **Premium Plan:** ⭐
+            **Premium:** ⭐
             - 🏠 Street Addresses
             - 📮 Zip Codes
             - 💳 Credit Card Numbers
@@ -472,25 +378,125 @@ def show_main_app(user, is_premium):
             - 🤖 AI Detection (coming soon)
             """)
 
+def show_account_tab():
+    """Display the account/signup tab"""
+    
+    if not PREMIUM_ENABLED:
+        st.info("Premium features are not configured yet.")
+        return
+    
+    # Check if user is logged in
+    if "user" in st.session_state and st.session_state.user:
+        user = st.session_state.user
+        tier = get_user_tier(user.id)
+        is_premium = tier == "premium"
+        
+        st.subheader(f"👤 {user.email}")
+        
+        if is_premium:
+            st.success("⭐ You have Premium access!")
+        else:
+            st.markdown("""
+            **Upgrade to Premium for:**
+            - 🏠 Address detection
+            - 💳 Credit card detection
+            - 📮 Zip code detection
+            - 📄 Batch processing (coming soon)
+            - 🤖 AI-powered detection (coming soon)
+            
+            **$9/month** — Cancel anytime
+            """)
+            if st.button("Upgrade Now", type="primary"):
+                checkout_url = create_checkout_session(user.email, user.id)
+                if checkout_url:
+                    st.markdown(f'<a href="{checkout_url}" target="_blank">Click here to complete payment</a>', unsafe_allow_html=True)
+        
+        st.divider()
+        if st.button("Logout"):
+            supabase.auth.sign_out()
+            del st.session_state.user
+            st.rerun()
+    
+    else:
+        # Login / Signup forms
+        login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
+        
+        with login_tab:
+            with st.form("login_form"):
+                email = st.text_input("Email")
+                password = st.text_input("Password", type="password")
+                submitted = st.form_submit_button("Login", use_container_width=True)
+                
+                if submitted and email and password:
+                    try:
+                        res = supabase.auth.sign_in_with_password({
+                            "email": email,
+                            "password": password
+                        })
+                        if res.user:
+                            st.session_state.user = res.user
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Login failed: {str(e)}")
+        
+        with signup_tab:
+            with st.form("signup_form"):
+                new_email = st.text_input("Email", key="signup_email")
+                new_password = st.text_input("Password", type="password", key="signup_pw")
+                confirm_password = st.text_input("Confirm Password", type="password")
+                submitted = st.form_submit_button("Sign Up", use_container_width=True)
+                
+                if submitted:
+                    if not new_email or not new_password:
+                        st.error("Please fill in all fields")
+                    elif new_password != confirm_password:
+                        st.error("Passwords don't match")
+                    elif len(new_password) < 6:
+                        st.error("Password must be at least 6 characters")
+                    else:
+                        try:
+                            res = supabase.auth.sign_up({
+                                "email": new_email,
+                                "password": new_password
+                            })
+                            if res.user:
+                                create_user_record(res.user.id, new_email)
+                                st.success("Account created! Please check your email to confirm, then login.")
+                        except Exception as e:
+                            st.error(f"Signup failed: {str(e)}")
+
 # ============ APP ENTRY POINT ============
 
 def main():
-    # Check if user is logged in
-    if "user" not in st.session_state:
-        show_auth_page()
-        st.stop()
+    # Header
+    st.markdown('<p class="main-header">🔒 PDF Redactor</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">Automatically find and redact sensitive information from PDFs</p>', unsafe_allow_html=True)
     
-    user = st.session_state.user
+    # Check for payment success
+    query_params = st.query_params
+    if query_params.get("payment") == "success":
+        st.success("🎉 Payment successful! Your premium features are now active.")
+        st.query_params.clear()
     
-    # Create user record if needed
-    create_user_record(user.id, user.email)
+    # Check if user is logged in and premium
+    is_premium = False
+    user = None
+    if "user" in st.session_state and st.session_state.user:
+        user = st.session_state.user
+        tier = get_user_tier(user.id)
+        is_premium = tier == "premium"
     
-    # Get user tier
-    tier = get_user_tier(user.id)
-    is_premium = tier == "premium"
+    # Tabs: Redactor and Account
+    tab1, tab2 = st.tabs(["📄 Redactor", "👤 Account"])
     
-    # Show main app
-    show_main_app(user, is_premium)
+    with tab1:
+        # Show premium badge if applicable
+        if is_premium:
+            st.markdown('<span class="premium-badge">⭐ Premium</span>', unsafe_allow_html=True)
+        show_redactor_app(is_premium=is_premium, user=user)
+    
+    with tab2:
+        show_account_tab()
 
 if __name__ == "__main__":
     main()
