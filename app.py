@@ -360,7 +360,7 @@ def show_redactor_app(is_premium=False, user=None):
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("""
-            **Free:**
+            **Free Tier:**
             - 🔢 Social Security Numbers
             - 📅 Dates of Birth
             - 📞 Phone Numbers
@@ -370,13 +370,13 @@ def show_redactor_app(is_premium=False, user=None):
             """)
         with col2:
             st.markdown("""
-            **Premium:** ⭐
+            **Premium Tier:** ⭐
             - 🏠 Street Addresses
             - 📮 Zip Codes
             - 💳 Credit Card Numbers
-            - 📄 Batch Processing
-            - 🤖 AI Detection (coming soon)
             """)
+            if not is_premium:
+                st.markdown("*Sign up in the Account tab to unlock premium detection.*")
 
 def show_account_tab():
     """Display the account/signup tab"""
@@ -490,9 +490,11 @@ def main():
     tab1, tab2 = st.tabs(["📄 Redactor", "👤 Account"])
     
     with tab1:
-        # Show premium badge if applicable
+        # Show premium status
         if is_premium:
-            st.markdown('<span class="premium-badge">⭐ Premium</span>', unsafe_allow_html=True)
+            st.success("⭐ **Premium Features Active** — Address, Zip Code, and Credit Card detection enabled!")
+        elif user:
+            st.info("You're on the Free plan. Upgrade in the Account tab to unlock more detection patterns.")
         show_redactor_app(is_premium=is_premium, user=user)
     
     with tab2:
